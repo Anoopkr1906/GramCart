@@ -24,8 +24,7 @@ const AdminLayout = ({ children }) => {
                     Authorization: `Bearer ${token}`
                 }
             })
-
-            setIsAdmin(data.isAdmin);
+            setIsAdmin(data.data.isAdmin);
         } catch (error) {
             console.log(error)
         }finally{
