@@ -1,5 +1,6 @@
 'use client'
 import { assets } from "@/assets/assets"
+import axios from "axios"
 import Image from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
@@ -16,8 +17,9 @@ export default function StoreAddProduct() {
         price: 0,
         category: "",
     })
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false);
 
+    const {getToken} = useAuth() ;
 
     const onChangeHandler = (e) => {
         setProductInfo({ ...productInfo, [e.target.name]: e.target.value })
@@ -26,7 +28,53 @@ export default function StoreAddProduct() {
     const onSubmitHandler = async (e) => {
         e.preventDefault()
         // Logic to add a product
-        
+        try {
+            // if no images are added, then return 
+            if(!images[1] && !images[2] && !images[3] && !images[4]){
+                return toast.error("Please upload at least one product image.");
+            }
+
+            setLoading(true);
+
+            const token = await getToken() ;
+
+            const formdata = new FormData() ;
+            formdata.append("name" , productInfo.name) ;
+            formdata.append("description" , productInfo.description) ;
+            formdata.append("mrp" , productInfo.mrp) ;
+            formdata.append("price" , productInfo.price) ;
+            formdata.append("category" , productInfo.category) ;
+
+            // adding images to formdata
+            Object.keys(images).forEach((key) => {
+                images[key] && formdata.append("images" , images[key]) ;
+            });
+
+            const {data} = await axios.post("/api/store/product" , formdata , {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            })
+
+            toast.success(data.message);
+
+            // reset the form
+            setProductInfo({
+                name: "",
+                description: "",
+                mrp: 0,
+                price: 0,
+                category: "",
+            });
+
+            // reset images
+            setImages({ 1: null, 2: null, 3: null, 4: null });
+
+        } catch (error) {
+            toast.error(error?.response?.data?.error || error.message);
+        }finally{
+            setLoading(false);
+        }
     }
 
 
