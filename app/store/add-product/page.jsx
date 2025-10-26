@@ -1,5 +1,6 @@
 'use client'
 import { assets } from "@/assets/assets"
+import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import Image from "next/image"
 import { useState } from "react"
@@ -18,11 +19,58 @@ export default function StoreAddProduct() {
         category: "",
     })
     const [loading, setLoading] = useState(false);
+    const [aiUsed , setAiUsed] = useState(false);
 
     const {getToken} = useAuth() ;
 
     const onChangeHandler = (e) => {
         setProductInfo({ ...productInfo, [e.target.name]: e.target.value })
+    }
+
+    const handleImageUpload = async (key , file) => {
+        setImages(prev => ({...prev , [key]: file}));
+
+        if(key === "1" && file && !aiUsed){
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = async () => {
+                const base64String = reader.result.split(",")[1]
+                const mimeType = file.type ;
+                const token = await getToken() ;
+
+                try {
+                    await toast.promise(
+                        axios.post("/api/store/ai" , {base64Image: base64String , mimeType} , {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            }
+                        }),
+                        {
+                            loading: "Analyzing Image with AI...",
+                            success: (res) => {
+                                const data = res.data;
+                                if(data.name && data.description){
+                                    setProductInfo(prev => ({
+                                        ...prev , 
+                                        name: data.name ,
+                                        description: data.description
+                                    }));
+
+                                    setAiUsed(true);
+                                    return "AI filled product info!";
+                                }
+                                return "AI could not generate product info.";
+                            },
+                            error: (err) => {
+                                err?.response?.data?.error || err.message;
+                            }
+                        }
+                    )
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        }
     }
 
     const onSubmitHandler = async (e) => {
@@ -87,7 +135,7 @@ export default function StoreAddProduct() {
                 {Object.keys(images).map((key) => (
                     <label key={key} htmlFor={`images${key}`}>
                         <Image width={300} height={300} className='h-15 w-auto border border-slate-200 rounded cursor-pointer' src={images[key] ? URL.createObjectURL(images[key]) : assets.upload_area} alt="" />
-                        <input type="file" accept='image/*' id={`images${key}`} onChange={e => setImages({ ...images, [key]: e.target.files[0] })} hidden />
+                        <input type="file" accept='image/*' id={`images${key}`} onChange={e => handleImageUpload(key , e.target.files[0])} hidden />
                     </label>
                 ))}
             </div>

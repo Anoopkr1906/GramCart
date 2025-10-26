@@ -4,6 +4,7 @@ import Loading from "@/components/Loading"
 import { orderDummyData } from "@/assets/assets"
 import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
+import axios from "axios"
 
 export default function StoreOrders() {
     const [orders, setOrders] = useState([])
